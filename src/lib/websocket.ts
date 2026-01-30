@@ -1,7 +1,7 @@
 import { WsMessageType } from "@/types"
 import type { WsMessage, SingleMsgPayload } from "@/types"
 
-type MessageHandler = (message: WsMessage) => void
+type MessageHandler = (message: unknown) => void
 
 export class WebSocketClient {
   private ws: WebSocket | null = null
@@ -33,7 +33,7 @@ export class WebSocketClient {
 
         this.ws.onmessage = (event) => {
           try {
-            const message: WsMessage = JSON.parse(event.data)
+            const message = JSON.parse(event.data)
             // 收到任何消息都说明连接正常，重置心跳计数
             this.handlers.forEach((handler) => handler(message))
           } catch (error) {

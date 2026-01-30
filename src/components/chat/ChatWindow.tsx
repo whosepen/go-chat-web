@@ -101,11 +101,10 @@ export function ChatWindow({
           </div>
         ) : (
           <div className="flex flex-col w-full max-w-full space-y-2">
-            {messages.map((message, index) => (
+            {messages.map((message) => (
               <MessageBubble
                 key={message.id}
                 message={message}
-                prevMessage={index > 0 ? messages[index - 1] : undefined}
                 isOwn={message.sender_id === currentUserId}
                 isDark={isDark}
               />

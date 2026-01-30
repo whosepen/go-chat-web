@@ -176,8 +176,8 @@ export function ChatPage() {
       const wsUrl = getWebSocketUrl(token)
       const client = new WebSocketClient(wsUrl)
 
-      // 订阅消息
-      client.subscribe((message: WsMessage) => {
+      // 订阅消息 - 后端发送的是 Reply 结构: { from_id, type, content, send_time }
+      client.subscribe((message: { from_id: number; type: number; content: string; send_time: number }) => {
         handleWsMessage(message)
       })
 
@@ -192,7 +192,9 @@ export function ChatPage() {
 
   // 处理新消息 (后端 Reply 结构: { from_id, type, content, send_time })
   const handleNewMessage = useCallback((msg: { from_id: number; type: number; content: string; send_time: number }) => {
+    console.log("[WebSocket] Received message send_time:", msg.send_time)
     const timestamp = new Date(msg.send_time * 1000).toISOString()
+    console.log("[WebSocket] Created timestamp:", timestamp)
     const senderId = msg.from_id
     const receiverId = currentUserRef.current?.id || 0
     const selectedContact = selectedContactRef.current
@@ -235,12 +237,11 @@ export function ChatPage() {
     )
   }, [messages.length]) // 只依赖消息数量
 
-  // 处理 WebSocket 消息
-  const handleWsMessage = useCallback((message: WsMessage) => {
+  // 处理 WebSocket 消息 - 后端发送的是 Reply 结构: { from_id, type, content, send_time }
+  const handleWsMessage = useCallback((message: { from_id: number; type: number; content: string; send_time: number }) => {
     switch (message.type) {
       case WsMessageType.TypeSingleMsg:
-        // 后端发送的是 Reply 结构: { from_id, type, content, send_time }
-        handleNewMessage(message as { from_id: number; type: number; content: string; send_time: number })
+        handleNewMessage(message)
         break
       case WsMessageType.TypeHeartbeat:
         // 心跳响应
@@ -264,13 +265,16 @@ export function ChatPage() {
       const result = await response.json()
       if (result.code === 0) {
         console.log("[Chat] fetchChatHistory result count:", result.data?.length || 0)
+        if (result.data?.length > 0) {
+          console.log("[Chat] First message created_at:", result.data[0].created_at)
+        }
 
         const historyMessages: Message[] = (result.data || []).map((msg: { id: number; from_user_id: number; to_user_id: number; content: string; created_at: number }) => ({
           id: String(msg.id),
           sender_id: msg.from_user_id,
           receiver_id: msg.to_user_id,
           content: msg.content,
-          timestamp: new Date(msg.created_at * 1000).toISOString(),
+          timestamp: new Date(msg.created_at).toISOString(),
           status: "read" as const,
         }))
 

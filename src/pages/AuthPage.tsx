@@ -39,14 +39,13 @@ export function AuthPage() {
 
   const navigate = useNavigate()
 
-  // 主题切换
+  // 初始化主题
   useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add("dark")
-    } else {
-      document.documentElement.classList.remove("dark")
-    }
-  }, [isDark])
+    const savedTheme = localStorage.getItem("theme")
+    const isDarkMode = savedTheme === "dark"
+    setIsDark(isDarkMode)
+    document.documentElement.classList.toggle("dark", isDarkMode)
+  }, [])
 
   // 处理输入变化
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,7 +173,10 @@ export function AuthPage() {
 
   // 切换主题
   const toggleTheme = () => {
-    setIsDark(!isDark)
+    const newIsDark = !isDark
+    setIsDark(newIsDark)
+    localStorage.setItem("theme", newIsDark ? "dark" : "light")
+    document.documentElement.classList.toggle("dark", newIsDark)
   }
 
   return (
@@ -273,8 +275,8 @@ export function AuthPage() {
                   variant="outline"
                   size="icon"
                   className={isDark
-                    ? "bg-[hsl(0,0%,14.9%)] border-[hsl(0,0%,20%)] text-neutral-200 hover:bg-[hsl(0,0%,20%)]"
-                    : "bg-black border-neutral-300 text-white hover:bg-neutral-800 [&>svg]:text-white"
+                    ? "bg-[hsl(0,0%,14.9%)] border-[hsl(0,0%,20%)] text-white hover:bg-[hsl(0,0%,20%)]"
+                    : "bg-white border-neutral-200 text-black hover:bg-neutral-100"
                   }
                   onClick={() => setShowPassword(!showPassword)}
                 >
@@ -308,7 +310,7 @@ export function AuthPage() {
             )}
           </CardContent>
           <CardFooter>
-            <Button type="submit" className={`w-full ${isDark ? "bg-white text-white hover:bg-gray-200 border-0" : "bg-neutral-900 text-white hover:bg-neutral-800 border-0"}`} disabled={loading}>
+            <Button type="submit" className={`w-full ${isDark ? "bg-white text-black hover:bg-gray-200 border-0" : "bg-neutral-900 text-white hover:bg-neutral-800 border-0"}`} disabled={loading}>
               {loading ? "处理中..." : isLogin ? "登录" : "注册"}
             </Button>
           </CardFooter>

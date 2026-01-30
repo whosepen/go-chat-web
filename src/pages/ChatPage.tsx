@@ -32,6 +32,7 @@ export function ChatPage() {
   const [showFriendRequestsDialog, setShowFriendRequestsDialog] = useState(false)
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
+  const [sortBy, setSortBy] = useState<"recent" | "alpha">("recent")
 
   // 使用 ref 存储 currentUser，避免 useCallback 闭包问题
   const currentUserRef = useRef(currentUser)
@@ -417,6 +418,8 @@ export function ChatPage() {
             currentUsername={currentUser.nickname || currentUser.username}
             isDark={isDark}
             pendingRequestsCount={pendingRequestsCount}
+            sortBy={sortBy}
+            onToggleSort={() => setSortBy((prev) => (prev === "recent" ? "alpha" : "recent"))}
           />
         </div>
 

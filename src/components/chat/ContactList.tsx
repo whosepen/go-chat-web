@@ -1,11 +1,13 @@
 import { useState } from "react"
-import { Search, Circle, UserPlus, Bell, Settings } from "lucide-react"
+import { Search, Circle, UserPlus, Bell, Settings, ArrowUpDown, SortAsc } from "lucide-react"
 import type { Contact } from "@/types"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+
+type SortBy = "recent" | "alpha"
 
 interface ContactListProps {
   contacts: Contact[]
@@ -17,6 +19,8 @@ interface ContactListProps {
   currentUsername: string
   isDark: boolean
   pendingRequestsCount?: number
+  sortBy: SortBy
+  onToggleSort: () => void
 }
 
 export function ContactList({
@@ -29,10 +33,27 @@ export function ContactList({
   currentUsername,
   isDark,
   pendingRequestsCount = 0,
+  sortBy,
+  onToggleSort,
 }: ContactListProps) {
   const [searchTerm, setSearchTerm] = useState("")
 
-  const filteredContacts = contacts.filter((contact) =>
+  // 排序逻辑
+  const sortedContacts = [...contacts].sort((a, b) => {
+    if (sortBy === "alpha") {
+      // 首字母排序
+      const nameA = (a.nickname || a.username).toLowerCase()
+      const nameB = (b.nickname || b.username).toLowerCase()
+      return nameA.localeCompare(nameB)
+    } else {
+      // 最近更新排序（时间戳大的在前面）
+      const timeA = a.last_message_time ? new Date(a.last_message_time).getTime() : 0
+      const timeB = b.last_message_time ? new Date(b.last_message_time).getTime() : 0
+      return timeB - timeA
+    }
+  })
+
+  const filteredContacts = sortedContacts.filter((contact) =>
     contact.nickname.toLowerCase().includes(searchTerm.toLowerCase()) ||
     contact.username.toLowerCase().includes(searchTerm.toLowerCase())
   )
@@ -98,19 +119,34 @@ export function ContactList({
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isDark ? "text-neutral-500" : "text-neutral-400"}`} />
-          <Input
-            placeholder="搜索联系人..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className={`pl-9 ${
-              isDark
-                ? "bg-[hsl(0,0%,14.9%)] border-[hsl(0,0%,20%)] text-neutral-200 placeholder:text-neutral-500"
-                : "bg-white border-neutral-300 text-neutral-900 placeholder:text-neutral-400"
-            }`}
-          />
+        {/* Search & Sort */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isDark ? "text-neutral-500" : "text-neutral-400"}`} />
+            <Input
+              placeholder="搜索联系人..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={`pl-9 ${
+                isDark
+                  ? "bg-[hsl(0,0%,14.9%)] border-[hsl(0,0%,20%)] text-neutral-200 placeholder:text-neutral-500"
+                  : "bg-white border-neutral-300 text-neutral-900 placeholder:text-neutral-400"
+              }`}
+            />
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggleSort}
+            className={`shrink-0 ${isDark ? "text-neutral-400 hover:text-white" : "text-neutral-500 hover:text-neutral-900"}`}
+            title={sortBy === "recent" ? "切换到首字母排序" : "切换到最近排序"}
+          >
+            {sortBy === "recent" ? (
+              <ArrowUpDown className="h-4 w-4" />
+            ) : (
+              <SortAsc className="h-4 w-4" />
+            )}
+          </Button>
         </div>
       </div>
 

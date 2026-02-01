@@ -26,10 +26,10 @@ API.md
 CLAUDE.md
 .windsurfrules
 API.txt
-.claude
-.superdesign
-.cursor
-
+.claude/
+.superdesign/
+.cursor/
+.mcp.json
 
 # OS files
 Thumbs.db

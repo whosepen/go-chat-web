@@ -25,7 +25,7 @@ dist-ssr
 API.md
 CLAUDE.md
 .windsurfrules
-*.txt
+API.txt
 
 # OS files
 Thumbs.db

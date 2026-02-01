@@ -2,6 +2,8 @@
 
 基于 React + TypeScript + Vite + shadcn/ui 的实时即时通讯前端应用。
 
+后端仓库：https://github.com/whosepen/go-chat
+
 ## 技术栈
 
 - **前端框架**: React 19 + TypeScript

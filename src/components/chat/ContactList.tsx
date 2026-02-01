@@ -196,7 +196,7 @@ export function ContactList({
                     </div>
                     <div className="flex items-center justify-between mt-1 min-w-0">
                       <p className={`text-sm truncate min-w-0 ${isDark ? "text-neutral-400" : "text-neutral-500"}`}>
-                        {contact.last_message || "暂无消息"}
+                        {truncateMessage(contact.last_message, 14) || "暂无消息"}
                       </p>
                       {contact.unread_count > 0 && (
                         <span className={`h-5 min-w-5 px-1.5 rounded-full text-xs flex items-center justify-center ${
@@ -246,4 +246,10 @@ function formatTime(timestamp: string): string {
 
   // 更早
   return date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" })
+}
+
+// 截断消息文本
+function truncateMessage(message: string | undefined | null, maxLength: number): string {
+  if (!message) return ""
+  return message.length > maxLength ? message.slice(0, maxLength) + "..." : message
 }

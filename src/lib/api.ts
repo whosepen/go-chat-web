@@ -142,3 +142,37 @@ export async function getPendingRequestCount(): Promise<ApiResponse<{ count: num
   }
   return result
 }
+
+// 标记消息已读
+export async function markMessagesRead(targetId: number): Promise<ApiResponse> {
+  const response = await fetch(`${API_BASE_URL}/friend/mark-read`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify({ target_id: targetId }),
+  })
+  return response.json()
+}
+
+// 好友列表项（带未读计数）
+export interface FriendListItem {
+  id: number
+  username: string
+  nickname: string
+  avatar?: string
+  online: boolean
+  unread_count: number
+  last_message_time?: number
+}
+
+// 获取好友列表
+export async function getFriendList(): Promise<ApiResponse<FriendListItem[]>> {
+  const response = await fetch(`${API_BASE_URL}/friend/list`, {
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
+    },
+  })
+  return response.json()
+}

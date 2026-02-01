@@ -386,12 +386,41 @@ Content-Type: application/json
 }
 
 【data 数组元素字段说明】:
-  字段名       类型     说明
+  字段名              类型     说明
   ----------------------------------------------------------------
-  id          int      好友用户ID
-  username    string   好友用户名
-  nickname    string   好友昵称
-  avatar      string   好友头像URL
+  id                 int      好友用户ID
+  username           string   好友用户名
+  nickname           string   好友昵称
+  avatar             string   好友头像URL
+  online             bool     是否在线
+  unread_count       int      未读消息数量
+  last_message_time  int      最后消息时间戳(毫秒)
+
+--------------------------------------------------------------------------------
+11. 标记消息已读
+--------------------------------------------------------------------------------
+接口路径:     POST /api/friend/mark-read
+Content-Type: application/json
+认证:         需要 JWT
+
+【请求参数】(Request Body):
+  参数名       类型     必填     说明
+  ----------------------------------------------------------------
+  target_id    int      是       好友用户ID
+
+【请求示例】:
+{
+  "target_id": 2
+}
+
+【成功响应】(200):
+{
+  "code": 0,
+  "msg": "标记成功",
+  "data": null
+}
+
+【说明】: 当打开某好友的聊天窗口时调用，将该会话在数据库中的 last_read_msg_id 更新为当前最新的一条消息ID
 
 ================================================================================
                           其他接口
@@ -449,6 +478,7 @@ http://localhost:8080/swagger/index.html
   8       POST      /api/friend/handle           处理好友申请        是
   9       GET       /api/friend/requests         获取待处理申请列表  是
   10      GET       /api/friend/list             获取好友列表        是
-  11      GET       /swagger/*any                Swagger文档         否
+  11      POST      /api/friend/mark-read        标记消息已读        是
+  12      GET       /swagger/*any                Swagger文档         否
 
 ================================================================================

@@ -18,6 +18,7 @@ export interface Contact {
   last_message?: string
   last_message_time?: string
   unread_count: number
+  last_message_timestamp?: number // 后端返回的毫秒时间戳
 }
 
 // WebSocket 消息类型

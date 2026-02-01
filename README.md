@@ -72,7 +72,7 @@ pnpm build
 
 - 点击左侧好友列表中的联系人开始聊天
 - 底部输入框发送消息
-- 未读消息会在好友列表显示红色角标
+- 未读消息会在好友列表显示黑色角标
 
 ![聊天界面](pic/chat-window.png)
 
@@ -81,25 +81,19 @@ pnpm build
 - 点击侧边栏的「铃铛」图标查看待处理申请
 - 可以同意或拒绝好友申请
 
-![好友申请](pic/friend-requests.png)
-
 ### 5. 消息列表
 
 好友列表显示：
 - 好友头像和在线状态
 - 最后一条消息预览
 - 消息时间
-- 未读消息数量（红色角标）
-
-![好友列表](pic/contact-list.png)
+- 未读消息数量（黑色角标）
 
 ### 6. 设置
 
 - 点击侧边栏的「设置」图标
 - 可以切换深色/浅色主题
 - 退出登录
-
-![设置界面](pic/settings.png)
 
 ## 项目结构
 
@@ -255,16 +249,6 @@ export async function newApi(): Promise<ApiResponse> {
 }
 ```
 
-## 浏览器支持
-
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-## License
-
-MIT
 
 ---
 

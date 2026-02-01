@@ -15,7 +15,7 @@
 ## 功能特性
 
 - 用户认证（注册、登录）
-- 好友列表管理（搜索、添加、查看申请）
+- 好友列表管理（搜索、添加、查看申请
 - 实时消息收发（WebSocket）
 - 消息历史记录
 - 未读消息计数（持久化）
@@ -270,4 +270,4 @@ MIT
 
 本项目使用 [shadcn/ui](https://ui.shadcn.com/) 开源组件库。
 
-本项目开发过程中使用了 [Claude Code](https://claude.com/claude-code) 和 [Gemini](https://gemini.google.com/) 辅助编程。
+本项目开发过程中使用了 [Claude Code](https://claude.com/claude-code) 辅助编程。

@@ -27,6 +27,7 @@ import {
 } from "@/lib/api"
 import type { MyGroupItem } from "@/types"
 import * as chatCache from "@/lib/chatCache"
+import { SidebarProvider } from "@/components/ui/sidebar"
 
 // API 基础地址
 const API_BASE_URL = import.meta.env.VITE_API_HOST
@@ -700,6 +701,14 @@ export function ChatPage() {
     navigate("/auth")
   }
 
+  // 切换主题
+  const handleToggleTheme = () => {
+    const newIsDark = !isDark
+    setIsDark(newIsDark)
+    localStorage.setItem("theme", newIsDark ? "dark" : "light")
+    document.documentElement.classList.toggle("dark", newIsDark)
+  }
+
   // 显示好友信息卡片
   const handleShowFriendInfo = () => {
     if (selectedContact && selectedContact.chat_type === ChatType.Single) {
@@ -768,7 +777,7 @@ export function ChatPage() {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Contact List Sidebar */}
-        <div className="w-80 flex-shrink-0">
+        <SidebarProvider defaultOpen={true}>
           <ContactList
             contacts={contacts}
             selectedId={selectedContact?.id ?? null}
@@ -779,15 +788,19 @@ export function ChatPage() {
             onOpenCreateGroup={() => setShowCreateGroupDialog(true)}
             onOpenJoinGroup={() => setShowJoinGroupDialog(true)}
             currentUsername={currentUser.nickname || currentUser.username}
+            currentEmail={currentUser.username}
+            currentAvatar={currentUser.avatar}
             isDark={isDark}
             pendingRequestsCount={pendingRequestsCount}
             sortBy={sortBy}
             onToggleSort={() => setSortBy((prev) => (prev === "recent" ? "alpha" : "recent"))}
+            onToggleTheme={handleToggleTheme}
+            onLogout={handleLogout}
           />
-        </div>
+        </SidebarProvider>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           <ChatWindow
             contact={selectedContact}
             messages={messages}

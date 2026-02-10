@@ -1,6 +1,7 @@
 import { useState } from "react"
-import { Search, Circle, UserPlus, Bell, Settings, ArrowUpDown, SortAsc } from "lucide-react"
+import { Search, Circle, UserPlus, Bell, Settings, ArrowUpDown, SortAsc, Users, Plus } from "lucide-react"
 import type { Contact } from "@/types"
+import { ChatType } from "@/types"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,6 +17,8 @@ interface ContactListProps {
   onOpenAddFriend: () => void
   onOpenSettings: () => void
   onOpenFriendRequests: () => void
+  onOpenCreateGroup: () => void
+  onOpenJoinGroup: () => void
   currentUsername: string
   isDark: boolean
   pendingRequestsCount?: number
@@ -30,6 +33,8 @@ export function ContactList({
   onOpenAddFriend,
   onOpenSettings,
   onOpenFriendRequests,
+  onOpenCreateGroup,
+  onOpenJoinGroup,
   currentUsername,
   isDark,
   pendingRequestsCount = 0,
@@ -47,16 +52,18 @@ export function ContactList({
       return nameA.localeCompare(nameB)
     } else {
       // 最近更新排序（时间戳大的在前面）
-      const timeA = a.last_message_time ? new Date(a.last_message_time).getTime() : 0
-      const timeB = b.last_message_time ? new Date(b.last_message_time).getTime() : 0
+      const timeA = a.last_message_timestamp || a.last_message_time ? new Date(a.last_message_time || a.last_message_timestamp || 0).getTime() : 0
+      const timeB = b.last_message_timestamp || b.last_message_time ? new Date(b.last_message_time || b.last_message_timestamp || 0).getTime() : 0
       return timeB - timeA
     }
   })
 
   const filteredContacts = sortedContacts.filter((contact) =>
-    contact.nickname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (contact.nickname || contact.username).toLowerCase().includes(searchTerm.toLowerCase()) ||
     contact.username.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const totalPendingRequests = pendingRequestsCount
 
   return (
     <div className="flex flex-col h-full border-r border-[hsl(0,0%,20%)]" style={{ backgroundColor: isDark ? "hsl(0,0%,8%)" : "white" }}>
@@ -83,6 +90,24 @@ export function ContactList({
             <Button
               variant="ghost"
               size="icon"
+              onClick={onOpenCreateGroup}
+              className={isDark ? "text-neutral-400 hover:text-white" : "text-neutral-500 hover:text-neutral-900"}
+              title="创建群组"
+            >
+              <Users className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onOpenJoinGroup}
+              className={isDark ? "text-neutral-400 hover:text-white" : "text-neutral-500 hover:text-neutral-900"}
+              title="加入群组"
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onOpenAddFriend}
               className={isDark ? "text-neutral-400 hover:text-white" : "text-neutral-500 hover:text-neutral-900"}
               title="添加好友"
@@ -94,15 +119,15 @@ export function ContactList({
               size="icon"
               onClick={onOpenFriendRequests}
               className={isDark ? "text-neutral-400 hover:text-white" : "text-neutral-500 hover:text-neutral-900"}
-              title="好友申请"
+              title="申请通知"
             >
               <div className="relative">
                 <Bell className="h-5 w-5" />
-                {pendingRequestsCount > 0 && (
+                {totalPendingRequests > 0 && (
                   <span className={`absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full text-[10px] flex items-center justify-center ${
                     isDark ? "bg-white text-black" : "bg-neutral-900 text-white"
                   }`}>
-                    {pendingRequestsCount > 99 ? "99+" : pendingRequestsCount}
+                    {totalPendingRequests > 99 ? "99+" : totalPendingRequests}
                   </span>
                 )}
               </div>
@@ -124,7 +149,7 @@ export function ContactList({
           <div className="relative flex-1">
             <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isDark ? "text-neutral-500" : "text-neutral-400"}`} />
             <Input
-              placeholder="搜索联系人..."
+              placeholder="搜索好友或群组..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className={`pl-9 ${
@@ -155,11 +180,11 @@ export function ContactList({
         <div className="p-2">
           {filteredContacts.length === 0 ? (
             <div className={`text-center py-8 text-sm ${isDark ? "text-neutral-500" : "text-neutral-500"}`}>
-              {searchTerm ? "未找到匹配的联系人" : "暂无联系人"}
+              {searchTerm ? "未找到匹配的联系人或群组" : "暂无联系人和群组"}
             </div>
           ) : (
             filteredContacts.map((contact, index) => (
-              <div key={contact.id}>
+              <div key={`${contact.chat_type}_${contact.id}`}>
                 <div
                   className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
                     selectedId === contact.id
@@ -168,6 +193,7 @@ export function ContactList({
                   }`}
                   onClick={() => onSelect(contact)}
                 >
+                  {/* 头像 */}
                   <div className="relative">
                     <Avatar className="h-12 w-12">
                       <AvatarImage src={contact.avatar} />
@@ -175,18 +201,35 @@ export function ContactList({
                         {(contact.nickname || contact.username).slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <Circle
-                      className={`absolute bottom-0 right-0 h-3 w-3 ${
-                        contact.online
-                          ? "fill-green-500 text-green-500"
-                          : "fill-neutral-400 text-neutral-400"
-                      }`}
-                    />
+                    {/* 私聊显示在线状态 */}
+                    {contact.chat_type === ChatType.Single && (
+                      <Circle
+                        className={`absolute bottom-0 right-0 h-3 w-3 ${
+                          contact.online
+                            ? "fill-green-500 text-green-500"
+                            : "fill-neutral-400 text-neutral-400"
+                        }`}
+                      />
+                    )}
+                    {/* 群聊显示群图标 */}
+                    {contact.chat_type === ChatType.Group && (
+                      <div className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full flex items-center justify-center ${
+                        isDark ? "bg-neutral-800" : "bg-white"
+                      }`}>
+                        <Users className="h-3 w-3 text-blue-500" />
+                      </div>
+                    )}
                   </div>
+
+                  {/* 主体 */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between min-w-0">
                       <p className={`font-medium truncate min-w-0 ${isDark ? "text-white" : "text-neutral-900"}`}>
                         {contact.nickname || contact.username}
+                        {/* 群聊标识 */}
+                        {contact.chat_type === ChatType.Group && (
+                          <span className="ml-1 text-xs text-blue-500">[群]</span>
+                        )}
                       </p>
                       {contact.last_message_time && (
                         <span className={`text-xs flex-shrink-0 ml-2 ${isDark ? "text-neutral-500" : "text-neutral-400"}`}>
@@ -196,7 +239,9 @@ export function ContactList({
                     </div>
                     <div className="flex items-center justify-between mt-1 min-w-0">
                       <p className={`text-sm truncate min-w-0 ${isDark ? "text-neutral-400" : "text-neutral-500"}`}>
-                        {truncateMessage(contact.last_message, 14) || "暂无消息"}
+                        {contact.chat_type === ChatType.Group
+                          ? formatGroupLastMessage(contact.last_message)
+                          : (truncateMessage(contact.last_message, 18) || "暂无消息")}
                       </p>
                       {contact.unread_count > 0 && (
                         <span className={`h-5 min-w-5 px-1.5 rounded-full text-xs flex items-center justify-center ${
@@ -252,4 +297,15 @@ function formatTime(timestamp: string): string {
 function truncateMessage(message: string | undefined | null, maxLength: number): string {
   if (!message) return ""
   return message.length > maxLength ? message.slice(0, maxLength) + "..." : message
+}
+
+// 格式化群聊最后消息（提取发送者: 内容）
+function formatGroupLastMessage(message: string | undefined | null): string {
+  if (!message) return "暂无消息"
+  // 群聊消息格式通常是 "发送者: 内容"
+  const colonIndex = message.indexOf(": ")
+  if (colonIndex > 0) {
+    return message.slice(colonIndex + 2)
+  }
+  return truncateMessage(message, 20)
 }

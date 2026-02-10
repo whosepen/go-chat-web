@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react"
-import type { Message, Contact } from "@/types"
+import { useEffect, useRef, useMemo } from "react"
+import type { Message, Contact, GroupMember } from "@/types"
+import { ChatType } from "@/types"
 import { MessageBubble } from "./MessageBubble"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Circle } from "lucide-react"
+import { Circle, Users, MoreHorizontal } from "lucide-react"
 
 interface ChatWindowProps {
   contact: Contact | null
@@ -10,6 +11,10 @@ interface ChatWindowProps {
   currentUserId: number
   isDark: boolean
   loading: boolean
+  // 新增: 群聊成员信息
+  groupMembers?: Map<number, GroupMember>
+  // 新增: 显示信息卡片的回调
+  onShowInfo?: () => void
 }
 
 export function ChatWindow({
@@ -18,8 +23,13 @@ export function ChatWindow({
   currentUserId,
   isDark,
   loading,
+  groupMembers,
+  onShowInfo,
 }: ChatWindowProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // 判断是否为群聊
+  const isGroupChat = contact?.chat_type === ChatType.Group
 
   // 自动滚动到底部
   useEffect(() => {
@@ -35,6 +45,20 @@ export function ChatWindow({
       })
     }
   }, [messages])
+
+  // 获取发送者信息的 Map
+  const senderInfoMap = useMemo(() => {
+    const map = new Map<number, { nickname: string; avatar?: string }>()
+    if (groupMembers) {
+      groupMembers.forEach((member) => {
+        map.set(member.user_id, {
+          nickname: member.nickname,
+          avatar: member.avatar,
+        })
+      })
+    }
+    return map
+  }, [groupMembers])
 
   // 空状态
   if (!contact) {
@@ -65,22 +89,45 @@ export function ChatWindow({
               {(contact.nickname || contact.username).slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <Circle
-            className={`absolute bottom-0 right-0 h-3 w-3 ${
-              contact.online
-                ? "fill-green-500 text-green-500"
-                : "fill-neutral-400 text-neutral-400"
-            }`}
-          />
+          {/* 私聊显示在线状态 */}
+          {!isGroupChat && (
+            <Circle
+              className={`absolute bottom-0 right-0 h-3 w-3 ${
+                contact.online
+                  ? "fill-green-500 text-green-500"
+                  : "fill-neutral-400 text-neutral-400"
+              }`}
+            />
+          )}
         </div>
-        <div>
+        <div className="flex-1">
           <h3 className={`font-medium ${isDark ? "text-white" : "text-neutral-900"}`}>
             {contact.nickname || contact.username}
+            {/* 群聊标识 */}
+            {isGroupChat && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                <Users className="w-3 h-3 mr-1" />
+                群聊
+              </span>
+            )}
           </h3>
           <p className={`text-xs ${isDark ? "text-neutral-500" : "text-neutral-500"}`}>
-            {contact.online ? "在线" : "离线"}
+            {isGroupChat
+              ? `${contact.group_info?.member_count || 0} 位成员`
+              : (contact.online ? "在线" : "离线")}
           </p>
         </div>
+        {/* 信息按钮 */}
+        {onShowInfo && (
+          <button
+            onClick={onShowInfo}
+            className={`p-2 rounded-lg transition-colors ${
+              isDark ? "hover:bg-neutral-800 text-neutral-400" : "hover:bg-neutral-100 text-neutral-500"
+            }`}
+          >
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* Messages Area */}
@@ -95,20 +142,34 @@ export function ChatWindow({
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <p className={`text-sm ${isDark ? "text-neutral-500" : "text-neutral-500"}`}>
-                暂无消息，开始聊天吧
+                {isGroupChat ? "暂无群消息" : "暂无消息，开始聊天吧"}
               </p>
             </div>
           </div>
         ) : (
           <div className="flex flex-col w-full max-w-full space-y-2">
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                isOwn={message.sender_id === currentUserId}
-                isDark={isDark}
-              />
-            ))}
+            {messages.map((message, index) => {
+              // 获取发送者信息（群聊需要）
+              const senderInfo = senderInfoMap.get(message.sender_id)
+              const isOwn = message.sender_id === currentUserId
+
+              return (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  prevMessage={index > 0 ? messages[index - 1] : undefined}
+                  isOwn={isOwn}
+                  isDark={isDark}
+                  isGroupChat={isGroupChat}
+                  senderName={
+                    isOwn
+                      ? undefined // 自己发的消息不需要显示名字
+                      : message.sender_name || senderInfo?.nickname || `用户${message.sender_id}`
+                  }
+                  senderAvatar={senderInfo?.avatar}
+                />
+              )
+            })}
           </div>
         )}
       </div>

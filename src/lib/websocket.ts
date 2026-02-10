@@ -1,5 +1,5 @@
 import { WsMessageType } from "@/types"
-import type { WsMessage, SingleMsgPayload } from "@/types"
+import type { SingleMsgPayload, GroupSendPayload } from "@/types"
 
 type MessageHandler = (message: unknown) => void
 
@@ -21,10 +21,11 @@ export class WebSocketClient {
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
+        console.log("[WS] Connecting to:", this.url)
         this.ws = new WebSocket(this.url)
 
         this.ws.onopen = () => {
-          console.log("[WS] Connected")
+          console.log("[WS] Connected successfully")
           this.isManualClose = false
           this.reconnectAttempts = 0
           this.startHeartbeat()
@@ -34,10 +35,11 @@ export class WebSocketClient {
         this.ws.onmessage = (event) => {
           try {
             const message = JSON.parse(event.data)
+            console.log("[WS] Raw message received:", JSON.stringify(message))
             // 收到任何消息都说明连接正常，重置心跳计数
             this.handlers.forEach((handler) => handler(message))
           } catch (error) {
-            console.error("Failed to parse WebSocket message:", error)
+            console.error("[WS] Failed to parse message:", error)
           }
         }
 
@@ -56,46 +58,68 @@ export class WebSocketClient {
           }
         }
       } catch (error) {
+        console.error("[WS] Connection error:", error)
         reject(error)
       }
     })
   }
 
-  // 发送消息
-  send(message: WsMessage): void {
+  // 发送消息 - 直接格式，不嵌套 payload
+  send(message: { type: number; target_id?: number; content: string; media?: number; timestamp?: number }): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      console.log("[WS] Sending message:", JSON.stringify(message))
       this.ws.send(JSON.stringify(message))
     } else {
-      console.warn("WebSocket is not connected")
+      console.warn("[WS] WebSocket is not connected, cannot send message")
     }
   }
 
   // 发送心跳
   sendHeartbeat(): void {
+    console.log("[WS] Sending heartbeat")
     this.send({
       type: WsMessageType.TypeHeartbeat,
-      payload: { timestamp: Date.now() },
+      timestamp: Date.now(),
+      content: "",
     })
   }
 
   // 发送单聊消息
   sendSingleMsg(payload: SingleMsgPayload): void {
+    console.log("[WS] Sending single message to:", payload.target_id)
     this.send({
       type: WsMessageType.TypeSingleMsg,
       target_id: payload.target_id,
       content: payload.content,
+      media: 1, // 文本消息
+    })
+  }
+
+  // 发送群聊消息
+  sendGroupMsg(payload: GroupSendPayload): void {
+    console.log("[WS] Sending group message to:", payload.target_id)
+    this.send({
+      type: WsMessageType.TypeGroupMsg,
+      target_id: payload.target_id,
+      content: payload.content,
+      media: 1, // 文本消息
     })
   }
 
   // 订阅消息
   subscribe(handler: MessageHandler): () => void {
+    console.log("[WS] New handler subscribed, total:", this.handlers.size + 1)
     this.handlers.add(handler)
-    return () => this.handlers.delete(handler)
+    return () => {
+      console.log("[WS] Handler unsubscribed")
+      this.handlers.delete(handler)
+    }
   }
 
   // 启动心跳机制
   private startHeartbeat(): void {
     this.stopHeartbeat()
+    console.log("[WS] Starting heartbeat")
     this.heartbeatInterval = setInterval(() => {
       this.sendHeartbeat()
     }, 30000)
@@ -111,6 +135,7 @@ export class WebSocketClient {
 
   // 关闭连接
   close(): void {
+    console.log("[WS] Manual close")
     this.isManualClose = true
     this.stopHeartbeat()
     if (this.ws) {

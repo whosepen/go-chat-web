@@ -17,7 +17,6 @@ export function ImageCropper({ isOpen, onClose, onCropComplete, isDark }: ImageC
   const [rotation, setRotation] = useState(0)
   const [isProcessing, setIsProcessing] = useState(false)
 
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {

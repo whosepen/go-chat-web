@@ -31,6 +31,21 @@ export default defineConfig({
         ws: true,
         changeOrigin: true
       },
+      '/temp-files': {
+          target: 'http://localhost:9000',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/temp-files/, '/temp-files')
+      },
+      '/chat-files': {
+          target: 'http://localhost:9000',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/chat-files/, '/chat-files')
+      },
+      '/user-avatars': {
+          target: 'http://localhost:9000',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/user-avatars/, '/user-avatars')
+      }
     }
   }
 })

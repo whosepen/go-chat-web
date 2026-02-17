@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { toast } from 'vue-sonner'
 import request from '@/utils/request'
 import { Search, AlertCircle } from 'lucide-vue-next'
+import { transformUrl } from '@/utils/oss'
 
 const open = ref(false)
 const activeTab = ref('friend')
@@ -145,7 +146,7 @@ const resetForms = () => {
           
           <div v-if="friendSearchResult" class="border rounded-lg p-3 space-y-3">
             <div class="flex items-center gap-3">
-              <img :src="friendSearchResult.avatar || 'https://github.com/shadcn.png'" class="h-10 w-10 rounded-full" />
+              <img :src="transformUrl(friendSearchResult.avatar) || 'https://github.com/shadcn.png'" class="h-10 w-10 rounded-full" />
               <div>
                 <div class="font-medium">{{ friendSearchResult.nickname || friendSearchResult.username }}</div>
               </div>
@@ -166,7 +167,7 @@ const resetForms = () => {
           
           <div v-if="groupSearchResult" class="border rounded-lg p-3 space-y-3">
             <div class="flex items-center gap-3">
-              <img :src="groupSearchResult.icon || 'https://github.com/shadcn.png'" class="h-10 w-10 rounded-full" />
+              <img :src="transformUrl(groupSearchResult.icon) || 'https://github.com/shadcn.png'" class="h-10 w-10 rounded-full" />
               <div>
                 <div class="font-medium">{{ groupSearchResult.name }}</div>
                 <div class="text-xs text-muted-foreground">Members: {{ groupSearchResult.member_count }}</div>

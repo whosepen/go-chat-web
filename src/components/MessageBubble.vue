@@ -1,13 +1,36 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { format } from 'date-fns'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
+import { refreshDownloadUrl, transformUrl } from '@/utils/oss'
 
 const props = defineProps<{
   message: any
   isMe: boolean
 }>()
+
+const imageUrl = ref('')
+const videoUrl = ref('')
+
+onMounted(async () => {
+  if (props.message.media === 2) {
+    // 优先获取带签名的 URL
+    const signed = await refreshDownloadUrl(props.message.content)
+    imageUrl.value = signed || transformUrl(props.message.content)
+  } else if (props.message.media === 3) {
+    const signed = await refreshDownloadUrl(props.message.content)
+    videoUrl.value = signed || transformUrl(props.message.content)
+  }
+})
+
+const handleImageError = async () => {
+  // 如果之前获取签名失败或过期，重试一次
+  const newUrl = await refreshDownloadUrl(props.message.content)
+  if (newUrl) {
+    imageUrl.value = newUrl
+  }
+}
 
 const time = computed(() => {
   if (!props.message.send_time) return ''
@@ -38,10 +61,10 @@ const isVideo = computed(() => props.message.media === 3)
         )"
       >
         <div v-if="isImage">
-          <img :src="message.content" class="max-w-full rounded-md cursor-pointer" loading="lazy" />
+          <img :src="imageUrl" class="max-w-full rounded-md cursor-pointer" loading="lazy" @error="handleImageError" />
         </div>
         <div v-else-if="isVideo">
-          <video :src="message.content" controls class="max-w-full rounded-md"></video>
+          <video :src="videoUrl" controls class="max-w-full rounded-md"></video>
         </div>
         <div v-else>
           {{ message.content }}

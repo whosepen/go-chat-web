@@ -168,11 +168,11 @@ export const useChatStore = defineStore('chat', {
       this.pushTempMessage(msg, targetId)
       wsService.send(msg)
     },
-    async sendMediaMessage(url: string, type: number, targetId: string | number, mediaType: number) {
+    async sendMediaMessage(content: string, type: number, targetId: string | number, mediaType: number) {
       const msg = {
         type,
         target_id: targetId,
-        content: url,
+        content,
         media: mediaType
       }
       this.pushTempMessage(msg, targetId)

@@ -33,11 +33,9 @@ const handleUpload = async (file: File) => {
   try {
     // 1. Get Upload Token
     // Send params as query params to support backend using c.GetString (workaround)
-    const res: any = await request.post('/media/upload', {}, {
-      params: {
+    const res: any = await request.post('/media/upload', {
         filename: file.name,
         type: 'chat'
-      }
     })
     
     const { put_url, file_url } = res
@@ -52,6 +50,7 @@ const handleUpload = async (file: File) => {
     // 3. Send Message with File URL
     // Media Type: 2 for Image, 3 for Audio/Video/File (simplified logic)
     const isImage = file.type.startsWith('image/')
+    const mediaType = isImage ? 2 : 3
     // Proto: 1:Text, 2:Image, 3:Audio. Let's assume 2 for Image.
     
     // Send message via WS
@@ -67,7 +66,7 @@ const handleUpload = async (file: File) => {
     */
     // I need to update ChatStore to support media type parameter.
     
-    chatStore.sendMediaMessage(file_url, activeChat.value?.type === 'group' ? 3 : 2, chatStore.activeChatId, isImage ? 2 : 3)
+    chatStore.sendMediaMessage(file_url, activeChat.value?.type === 'group' ? 3 : 2, chatStore.activeChatId, mediaType)
     
   } catch (e) {
     console.error('Upload failed', e)

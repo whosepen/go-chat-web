@@ -26,7 +26,8 @@ export const useUserStore = defineStore('user', {
       await request.post('/user/register', form, config)
     },
     async fetchUserInfo() {
-      const res: any = await request.get('/user/info')
+      // Use profile endpoint to get full info including avatar
+      const res: any = await request.get('/user/profile')
       this.userInfo = res
     },
     logout() {

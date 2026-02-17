@@ -2,7 +2,7 @@
 import { ref, watchEffect } from 'vue'
 import type { AvatarImageProps } from "reka-ui"
 import { AvatarImage } from "reka-ui"
-import { transformUrl, refreshDownloadUrl } from '@/utils/oss'
+import { loadImage } from '@/utils/oss'
 
 const props = defineProps<AvatarImageProps>()
 const finalSrc = ref('')
@@ -13,14 +13,8 @@ watchEffect(async () => {
     return
   }
 
-  // 尝试获取带签名的 URL (如果是 OSS 资源)
-  const signed = await refreshDownloadUrl(props.src)
-  if (signed) {
-    finalSrc.value = signed
-  } else {
-    // 如果获取签名失败或不是 OSS 资源，使用转换后的 URL
-    finalSrc.value = transformUrl(props.src)
-  }
+  const cachedUrl = await loadImage(props.src)
+  finalSrc.value = cachedUrl || props.src || ''
 })
 </script>
 

@@ -48,7 +48,7 @@ export const useChatStore = defineStore('chat', {
         type: 'private',
         unread: f.unread_count || 0,
         lastMsg: f.content || '',
-        lastTime: f.last_message_time ? new Date(f.last_message_time * 1000).toLocaleString() : ''
+        lastTime: f.last_message_time ? new Date(f.last_message_time).toLocaleString() : ''
       }))
 
       // Transform groups
@@ -59,7 +59,7 @@ export const useChatStore = defineStore('chat', {
         type: 'group',
         unread: g.unread_count || 0,
         lastMsg: g.content || '',
-        lastTime: g.last_message_time ? new Date(g.last_message_time * 1000).toLocaleString() : ''
+        lastTime: g.last_message_time ? new Date(g.last_message_time).toLocaleString() : ''
       }))
 
       this.conversations = [...friends, ...groups]
@@ -185,7 +185,13 @@ export const useChatStore = defineStore('chat', {
         from_id: userStore.userInfo?.id || 'me',
         nickname: userStore.userInfo?.nickname || userStore.userInfo?.username,
         avatar: userStore.userInfo?.avatar,
-        send_time: Date.now() / 1000,
+        send_time: Date.now() / 1000, // Keep seconds for consistency with potential other usage or change to ms?
+        // Wait, if MessageBubble expects ms (from backend created_at), then local temp msg should also be ms if unified.
+        // But previously MessageBubble multiplied by 1000.
+        // If I change MessageBubble to NOT multiply, then backend created_at (ms) works.
+        // But local temp msg (seconds) will be treated as ms -> very small timestamp (1970).
+        // So local temp msg MUST be ms.
+        send_time: Date.now(),
         status: 'sending'
       }
       

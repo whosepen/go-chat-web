@@ -20,6 +20,12 @@ class WebSocketService {
     const userStore = useUserStore()
     if (!userStore.token) return
 
+    // 如果已经连接或正在连接，则不进行重复连接
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      console.log('WS already connected or connecting')
+      return
+    }
+
     if (this.ws) {
       this.ws.close()
     }

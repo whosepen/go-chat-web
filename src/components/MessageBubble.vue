@@ -3,7 +3,7 @@ import { computed, ref, onMounted } from 'vue'
 import { format } from 'date-fns'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
-import { refreshDownloadUrl, transformUrl } from '@/utils/oss'
+import { loadImage, transformUrl } from '@/utils/oss'
 
 const props = defineProps<{
   message: any
@@ -15,26 +15,30 @@ const videoUrl = ref('')
 
 onMounted(async () => {
   if (props.message.media === 2) {
-    // 优先获取带签名的 URL
-    const signed = await refreshDownloadUrl(props.message.content)
-    imageUrl.value = signed || transformUrl(props.message.content)
+    const cached = await loadImage(props.message.content)
+    imageUrl.value = cached || transformUrl(props.message.content)
   } else if (props.message.media === 3) {
-    const signed = await refreshDownloadUrl(props.message.content)
-    videoUrl.value = signed || transformUrl(props.message.content)
+    // 视频也可以缓存，但考虑到大小，这里暂时只对视频封面或较小视频做处理，或者统一处理
+    // 目前 loadImage 是通用的，只要是 OSS URL 都会尝试缓存
+    const cached = await loadImage(props.message.content)
+    videoUrl.value = cached || transformUrl(props.message.content)
   }
 })
 
 const handleImageError = async () => {
-  // 如果之前获取签名失败或过期，重试一次
-  const newUrl = await refreshDownloadUrl(props.message.content)
+  // 重新尝试加载（会再次尝试缓存或下载）
+  const newUrl = await loadImage(props.message.content)
   if (newUrl) {
     imageUrl.value = newUrl
   }
 }
 
 const time = computed(() => {
-  if (!props.message.send_time) return ''
-  return format(new Date(props.message.send_time * 1000), 'HH:mm')
+  // 后端返回的是 created_at (毫秒级时间戳) 或 send_time (本地消息也是毫秒)
+  const timestamp = props.message.created_at || props.message.send_time
+  if (!timestamp) return ''
+  // 统一按毫秒处理，不再乘以 1000
+  return format(new Date(timestamp), 'HH:mm')
 })
 
 const isImage = computed(() => props.message.media === 2)

@@ -48,7 +48,7 @@ const handleAvatarUpload = async (event: Event) => {
     const res: any = await request.post('/media/upload', {
       filename: file.name,
       type: 'avatar'
-    }, { silent: true })
+    }, { silent: true } as any)
     
     const { put_url, file_url } = res
     
@@ -67,7 +67,7 @@ const handleUpdateProfile = async () => {
   loading.value = true
   errorMessage.value = ''
   try {
-    await request.post('/user/info/update', form.value, { silent: true })
+    await request.post('/user/info/update', form.value, { silent: true } as any)
     toast.success('Profile updated')
     await userStore.fetchUserInfo()
   } catch (e: any) {
@@ -89,7 +89,7 @@ const handleUpdatePassword = async () => {
     await request.post('/user/password/update', {
       old_password: passwordForm.value.old_password,
       new_password: passwordForm.value.new_password
-    }, { silent: true })
+    }, { silent: true } as any)
     toast.success('Password updated')
     passwordForm.value = { old_password: '', new_password: '', confirm_password: '' }
   } catch (e: any) {

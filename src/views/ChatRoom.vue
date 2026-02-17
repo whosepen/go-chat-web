@@ -52,7 +52,6 @@ const handleUpload = async (file: File) => {
     // 3. Send Message with File URL
     // Media Type: 2 for Image, 3 for Audio/Video/File (simplified logic)
     const isImage = file.type.startsWith('image/')
-    const mediaType = isImage ? 2 : 3 // Need to verify proto for exact types
     // Proto: 1:Text, 2:Image, 3:Audio. Let's assume 2 for Image.
     
     // Send message via WS
@@ -100,7 +99,7 @@ const handleUpload = async (file: File) => {
           v-for="(msg, index) in messages" 
           :key="index" 
           :message="msg" 
-          :is-me="msg.from_id === userStore.userInfo?.ID || msg.from_id === 'me'" 
+          :is-me="String(msg.from_id) === String(userStore.userInfo?.id) || msg.from_id === 'me'" 
         />
       </div>
     </ScrollArea>

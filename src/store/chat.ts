@@ -86,6 +86,7 @@ export const useChatStore = defineStore('chat', {
     async fetchHistory(targetId: string | number, type: number) {
         if (this.messages[targetId] && this.messages[targetId].length > 0) return
         try {
+            const userStore = useUserStore()
             const res: any = await request.get('/chat/history', { 
                 params: { 
                     target_id: targetId, 
@@ -98,16 +99,21 @@ export const useChatStore = defineStore('chat', {
             // We need to map them to our format if necessary.
             // Based on backend code: service.GetHistoryMsg returns []MessageDTO
             
-            const msgs = (res || []).map((m: any) => ({
-                id: m.id,
-                content: m.content,
-                from_id: m.from_user_id,
-                target_id: m.to_user_id,
-                type: m.type,
-                media: m.media,
-                send_time: m.created_at,
-                // Add sender info if possible, or just rely on IDs
-            }))
+            const msgs = (res || []).map((m: any) => {
+                const isMe = String(m.from_user_id) === String(userStore.userInfo?.id)
+                return {
+                    id: m.id,
+                    content: m.content,
+                    from_id: m.from_user_id,
+                    target_id: m.to_user_id,
+                    type: m.type,
+                    media: m.media,
+                    send_time: m.created_at,
+                    // Add sender info if possible, or just rely on IDs
+                    nickname: isMe ? (userStore.userInfo?.nickname || userStore.userInfo?.username) : (m.sender_name || m.nickname),
+                    avatar: isMe ? userStore.userInfo?.avatar : (m.sender_avatar || m.avatar),
+                }
+            })
             
             this.messages[targetId] = msgs
         } catch (e) {
@@ -120,7 +126,13 @@ export const useChatStore = defineStore('chat', {
       if (msg.type === MsgType.GroupMsg) {
         chatId = msg.target_id
       } else {
-        chatId = msg.from_id === userStore.userInfo?.ID ? msg.target_id : msg.from_id
+        chatId = String(msg.from_id) === String(userStore.userInfo?.id) ? msg.target_id : msg.from_id
+      }
+      
+      // Ensure sender info is present for self messages (e.g. synced from other devices)
+      if (String(msg.from_id) === String(userStore.userInfo?.id)) {
+        if (!msg.nickname) msg.nickname = userStore.userInfo?.nickname || userStore.userInfo?.username
+        if (!msg.avatar) msg.avatar = userStore.userInfo?.avatar
       }
       
       if (!this.messages[chatId]) {
@@ -170,7 +182,9 @@ export const useChatStore = defineStore('chat', {
       const userStore = useUserStore()
       const tempMsg = {
         ...msg,
-        from_id: userStore.userInfo?.ID || 'me',
+        from_id: userStore.userInfo?.id || 'me',
+        nickname: userStore.userInfo?.nickname || userStore.userInfo?.username,
+        avatar: userStore.userInfo?.avatar,
         send_time: Date.now() / 1000,
         status: 'sending'
       }

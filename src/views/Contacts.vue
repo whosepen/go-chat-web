@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useUserStore } from '@/store/user'
+import { useChatStore } from '@/store/chat'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -13,7 +13,6 @@ const activeTab = ref('friends')
 const friends = ref<any[]>([])
 const friendRequests = ref<any[]>([])
 const groupRequests = ref<any[]>([])
-const loading = ref(false)
 
 const fetchFriends = async () => {
   try {

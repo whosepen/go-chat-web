@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, computed } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { wsService } from '@/services/ws'
 import { useUserStore } from '@/store/user'
@@ -7,7 +7,6 @@ import { useChatStore } from '@/store/chat'
 import { Toaster } from '@/components/ui/sonner'
 import { MessageSquare, Users, Settings, LogOut } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { toast } from 'vue-sonner'
 import ChatList from '@/components/ChatList.vue'
 
 const userStore = useUserStore()

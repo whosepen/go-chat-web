@@ -154,6 +154,6 @@ const navigateTo = (tab: string) => {
       <RouterView />
     </main>
     
-    <Toaster />
+    <Toaster position="top-center" />
   </div>
 </template>

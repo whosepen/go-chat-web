@@ -17,8 +17,8 @@ onMounted(async () => {
   await chatStore.fetchConversations()
 })
 
-const handleChatClick = (id: number | string) => {
-  chatStore.setActiveChat(id)
+const handleChatClick = (chat: any) => {
+  chatStore.setActiveChat(chat.id, chat.type)
   router.push('/')
 }
 </script>
@@ -45,10 +45,10 @@ const handleChatClick = (id: number | string) => {
       <div class="flex flex-col gap-1 px-2">
         <div 
           v-for="chat in chatStore.conversations.filter(c => (c.name || '').toLowerCase().includes(search.toLowerCase()))" 
-          :key="chat.id"
+          :key="chat.id + '-' + chat.type"
           class="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors"
-          :class="chatStore.activeChatId === chat.id ? 'bg-secondary' : 'hover:bg-muted/50'"
-          @click="handleChatClick(chat.id)"
+          :class="(chatStore.activeChatId === chat.id && chatStore.activeChatType === chat.type) ? 'bg-secondary' : 'hover:bg-muted/50'"
+          @click="handleChatClick(chat)"
         >
           <div class="relative">
             <Avatar>

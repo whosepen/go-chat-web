@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { toast } from 'vue-sonner'
 import request from '@/utils/request'
 import { Search, AlertCircle } from 'lucide-vue-next'
-import { transformUrl } from '@/utils/oss'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 const open = ref(false)
 const activeTab = ref('friend')
@@ -31,7 +31,7 @@ const handleSearchFriend = async () => {
   errorMessage.value = ''
   if (!friendUsername.value) return
   try {
-    const res = await request.get('/user/search', { params: { username: friendUsername.value }, silent: true })
+    const res = await request.get('/user/search', { params: { username: friendUsername.value }, silent: true } as any)
     friendSearchResult.value = res
   } catch (e: any) {
     friendSearchResult.value = null
@@ -46,7 +46,7 @@ const handleAddFriend = async () => {
     await request.post('/friend/request', { 
       target_id: friendSearchResult.value.id, 
       remark: friendRemark.value || 'Hello' 
-    }, { silent: true })
+    }, { silent: true } as any)
     toast.success('Friend request sent')
     open.value = false
     resetForms()
@@ -59,7 +59,7 @@ const handleSearchGroup = async () => {
   errorMessage.value = ''
   if (!groupCode.value) return
   try {
-    const res = await request.get('/group/search', { params: { group_code: groupCode.value }, silent: true })
+    const res = await request.get('/group/search', { params: { group_code: groupCode.value }, silent: true } as any)
     groupSearchResult.value = res
   } catch (e: any) {
     groupSearchResult.value = null
@@ -74,7 +74,7 @@ const handleJoinGroup = async () => {
     await request.post('/group/join', { 
       group_id: groupSearchResult.value.id, 
       remark: groupRemark.value || 'Hello' 
-    }, { silent: true })
+    }, { silent: true } as any)
     toast.success('Join request sent')
     open.value = false
     resetForms()
@@ -87,7 +87,7 @@ const handleCreateGroup = async () => {
   errorMessage.value = ''
   if (!createGroupName.value) return
   try {
-    await request.post('/group/create', { name: createGroupName.value }, { silent: true })
+    await request.post('/group/create', { name: createGroupName.value }, { silent: true } as any)
     toast.success('Group created')
     open.value = false
     resetForms()
@@ -146,7 +146,10 @@ const resetForms = () => {
           
           <div v-if="friendSearchResult" class="border rounded-lg p-3 space-y-3">
             <div class="flex items-center gap-3">
-              <img :src="transformUrl(friendSearchResult.avatar) || 'https://github.com/shadcn.png'" class="h-10 w-10 rounded-full" />
+              <Avatar class="h-10 w-10">
+                <AvatarImage :src="friendSearchResult.avatar" />
+                <AvatarFallback>{{ (friendSearchResult.nickname || friendSearchResult.username).slice(0, 2).toUpperCase() }}</AvatarFallback>
+              </Avatar>
               <div>
                 <div class="font-medium">{{ friendSearchResult.nickname || friendSearchResult.username }}</div>
               </div>
@@ -167,7 +170,10 @@ const resetForms = () => {
           
           <div v-if="groupSearchResult" class="border rounded-lg p-3 space-y-3">
             <div class="flex items-center gap-3">
-              <img :src="transformUrl(groupSearchResult.icon) || 'https://github.com/shadcn.png'" class="h-10 w-10 rounded-full" />
+              <Avatar class="h-10 w-10">
+                <AvatarImage :src="groupSearchResult.icon" />
+                <AvatarFallback>{{ groupSearchResult.name.slice(0, 2).toUpperCase() }}</AvatarFallback>
+              </Avatar>
               <div>
                 <div class="font-medium">{{ groupSearchResult.name }}</div>
                 <div class="text-xs text-muted-foreground">Members: {{ groupSearchResult.member_count }}</div>

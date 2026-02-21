@@ -22,6 +22,10 @@ export const useChatStore = defineStore('chat', {
     totalRequests: (state) => state.friendRequestCount + state.groupRequestCount
   },
   actions: {
+    getChatKey(id: string | number, type: string | number) {
+        const typeStr = (type === 'group' || type === 3) ? 'group' : 'private'
+        return `${typeStr}-${id}`
+    },
     async fetchRequestCounts() {
       try {
         const [fRes, gRes] = await Promise.all([
@@ -44,6 +48,7 @@ export const useChatStore = defineStore('chat', {
       const friends = ((friendsRes as any) || []).map((f: any) => ({
         id: f.id,
         name: f.nickname || f.username,
+        username: f.username,
         avatar: f.avatar,
         type: 'private',
         unread: f.unread_count || 0,
@@ -64,27 +69,67 @@ export const useChatStore = defineStore('chat', {
 
       this.conversations = [...friends, ...groups]
     },
-    setActiveChat(id: string | number) {
+    async setActiveChat(id: string | number | null, type: 'private' | 'group' | null = null) {
+      // If there was a previous chat, mark it as read before switching
+      if (this.activeChatId && (this.activeChatId !== id || this.activeChatType !== type)) {
+        const prevChat = this.conversations.find(c => c.id === this.activeChatId && c.type === this.activeChatType)
+        if (prevChat) {
+            try {
+                const endpoint = prevChat.type === 'group' ? '/group/mark-read' : '/friend/mark-read'
+                const payload = { target_id: Number(prevChat.id) }
+                await request.post(endpoint, payload, { silent: true } as any)
+            } catch (e) {
+                console.error('Failed to mark as read (leave)', e)
+            }
+        }
+      }
+
       this.activeChatId = id
-      const chat = this.conversations.find(c => c.id === id)
+      if (!id) {
+          this.activeChatType = null
+          return
+      }
+
+      // If type is provided, use it to find the chat. Otherwise, try to infer (backward compatibility, but safer to use type)
+      // Since IDs can conflict, type is mandatory for correct resolution if not unique.
+      // But let's support type if passed.
+      
+      let chat;
+      if (type) {
+        chat = this.conversations.find(c => c.id === id && c.type === type)
+      } else {
+        chat = this.conversations.find(c => c.id === id)
+      }
+      
       if (chat) {
         this.activeChatType = chat.type
         this.fetchHistory(id, chat.type === 'private' ? 2 : 3)
+        
+        // Mark as read immediately upon entering
+        try {
+            const endpoint = chat.type === 'group' ? '/group/mark-read' : '/friend/mark-read'
+            const payload = { target_id: Number(chat.id) }
+            await request.post(endpoint, payload, { silent: true } as any)
+        } catch (e) {
+            console.error('Failed to mark as read (enter)', e)
+        }
       }
       
+      const chatKey = this.getChatKey(id, this.activeChatType || 'private')
       // Clear unread count for this chat in the store
-      if (this.unreadCounts[id]) {
-        this.unreadCounts[id] = 0
+      if (this.unreadCounts[chatKey]) {
+        this.unreadCounts[chatKey] = 0
       }
       
       // Update the specific conversation's unread count
-      const idx = this.conversations.findIndex(c => c.id === id)
+      const idx = this.conversations.findIndex(c => c.id === id && c.type === this.activeChatType)
       if (idx !== -1) {
         this.conversations[idx].unread = 0
       }
     },
     async fetchHistory(targetId: string | number, type: number) {
-        if (this.messages[targetId] && this.messages[targetId].length > 0) return
+        const chatKey = this.getChatKey(targetId, type)
+        if (this.messages[chatKey] && this.messages[chatKey].length > 0) return
         try {
             const userStore = useUserStore()
             const res: any = await request.get('/chat/history', { 
@@ -101,6 +146,20 @@ export const useChatStore = defineStore('chat', {
             
             const msgs = (res || []).map((m: any) => {
                 const isMe = String(m.from_user_id) === String(userStore.userInfo?.id)
+                // Find sender info
+                let senderInfo = null
+                if (isMe) {
+                    senderInfo = userStore.userInfo
+                } else if (type === 2) {
+                    // For private chat, try to find in conversations
+                    senderInfo = this.conversations.find(c => String(c.id) === String(m.from_user_id) && c.type === 'private')
+                } else if (type === 3) {
+                    // For group chat, we try to use the sender info if available in the message object
+                    // Or fallback to ID if not present.
+                    // The frontend might need to fetch group members to get full info if backend doesn't provide it in message list.
+                    // But for now, we rely on what we have.
+                }
+
                 return {
                     id: m.id,
                     content: m.content,
@@ -109,13 +168,13 @@ export const useChatStore = defineStore('chat', {
                     type: m.type,
                     media: m.media,
                     send_time: m.created_at,
-                    // Add sender info if possible, or just rely on IDs
-                    nickname: isMe ? (userStore.userInfo?.nickname || userStore.userInfo?.username) : (m.sender_name || m.nickname),
-                    avatar: isMe ? userStore.userInfo?.avatar : (m.sender_avatar || m.avatar),
+                    // Use found info or fallback. For group chat, m.sender_name/avatar should be populated by backend join query
+                    nickname: isMe ? (userStore.userInfo?.nickname || userStore.userInfo?.username) : (senderInfo?.name || m.sender_name || m.nickname || m.username || m.from_user_id),
+                    avatar: isMe ? userStore.userInfo?.avatar : (senderInfo?.avatar || m.sender_avatar || m.avatar),
                 }
             })
             
-            this.messages[targetId] = msgs
+            this.messages[chatKey] = msgs
         } catch (e) {
             console.error('Failed to fetch history', e)
         }
@@ -123,26 +182,34 @@ export const useChatStore = defineStore('chat', {
     receiveMessage(msg: any) {
       const userStore = useUserStore()
       let chatId
+      let chatType
       if (msg.type === MsgType.GroupMsg) {
         chatId = msg.target_id
+        chatType = 'group'
       } else {
         chatId = String(msg.from_id) === String(userStore.userInfo?.id) ? msg.target_id : msg.from_id
+        chatType = 'private'
       }
       
+      const chatKey = this.getChatKey(chatId, chatType)
+
       // Ensure sender info is present for self messages (e.g. synced from other devices)
       if (String(msg.from_id) === String(userStore.userInfo?.id)) {
         if (!msg.nickname) msg.nickname = userStore.userInfo?.nickname || userStore.userInfo?.username
         if (!msg.avatar) msg.avatar = userStore.userInfo?.avatar
       }
       
-      if (!this.messages[chatId]) {
-        this.messages[chatId] = []
+      if (!this.messages[chatKey]) {
+        this.messages[chatKey] = []
       }
-      this.messages[chatId]!.push(msg)
+      this.messages[chatKey]!.push(msg)
 
-      if (this.activeChatId !== chatId) {
-        this.unreadCounts[chatId] = (this.unreadCounts[chatId] || 0) + 1
-        const idx = this.conversations.findIndex(c => c.id === chatId)
+      // Check if this chat is active
+      const isActive = this.activeChatId === chatId && this.activeChatType === chatType
+
+      if (!isActive) {
+        this.unreadCounts[chatKey] = (this.unreadCounts[chatKey] || 0) + 1
+        const idx = this.conversations.findIndex(c => c.id === chatId && c.type === chatType)
         if (idx !== -1) {
           this.conversations[idx].unread = (this.conversations[idx].unread || 0) + 1
           this.conversations[idx].lastMsg = msg.content
@@ -151,7 +218,7 @@ export const useChatStore = defineStore('chat', {
           this.conversations.unshift(chat)
         }
       } else {
-        const idx = this.conversations.findIndex(c => c.id === chatId)
+        const idx = this.conversations.findIndex(c => c.id === chatId && c.type === chatType)
         if (idx !== -1) {
           this.conversations[idx].lastMsg = msg.content
           this.conversations[idx].lastTime = new Date().toLocaleString()
@@ -165,7 +232,7 @@ export const useChatStore = defineStore('chat', {
         content,
         media: 1
       }
-      this.pushTempMessage(msg, targetId)
+      this.pushTempMessage(msg, targetId, type)
       wsService.send(msg)
     },
     async sendMediaMessage(content: string, type: number, targetId: string | number, mediaType: number) {
@@ -175,30 +242,27 @@ export const useChatStore = defineStore('chat', {
         content,
         media: mediaType
       }
-      this.pushTempMessage(msg, targetId)
+      this.pushTempMessage(msg, targetId, type)
       wsService.send(msg)
     },
-    pushTempMessage(msg: any, targetId: string | number) {
+    pushTempMessage(msg: any, targetId: string | number, type: number) {
       const userStore = useUserStore()
       const tempMsg = {
         ...msg,
         from_id: userStore.userInfo?.id || 'me',
         nickname: userStore.userInfo?.nickname || userStore.userInfo?.username,
         avatar: userStore.userInfo?.avatar,
-        send_time: Date.now() / 1000, // Keep seconds for consistency with potential other usage or change to ms?
-        // Wait, if MessageBubble expects ms (from backend created_at), then local temp msg should also be ms if unified.
-        // But previously MessageBubble multiplied by 1000.
-        // If I change MessageBubble to NOT multiply, then backend created_at (ms) works.
         // But local temp msg (seconds) will be treated as ms -> very small timestamp (1970).
         // So local temp msg MUST be ms.
         send_time: Date.now(),
         status: 'sending'
       }
       
-      if (!this.messages[targetId]) {
-        this.messages[targetId] = []
+      const chatKey = this.getChatKey(targetId, type)
+      if (!this.messages[chatKey]) {
+        this.messages[chatKey] = []
       }
-      this.messages[targetId]!.push(tempMsg)
+      this.messages[chatKey]!.push(tempMsg)
     },
     handleWebRTC(data: any) {
         this.isCallIncoming = true

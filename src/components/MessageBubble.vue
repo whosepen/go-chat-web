@@ -4,6 +4,7 @@ import { format } from 'date-fns'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { loadImage, transformUrl } from '@/utils/oss'
+import { X, ZoomIn, ZoomOut } from 'lucide-vue-next'
 
 const props = defineProps<{
   message: any
@@ -12,6 +13,8 @@ const props = defineProps<{
 
 const imageUrl = ref('')
 const videoUrl = ref('')
+const showLightbox = ref(false)
+const zoomLevel = ref(1)
 
 onMounted(async () => {
   if (props.message.media === 2) {
@@ -31,6 +34,19 @@ const handleImageError = async () => {
   if (newUrl) {
     imageUrl.value = newUrl
   }
+}
+
+const openLightbox = () => {
+  showLightbox.value = true
+  zoomLevel.value = 1
+}
+
+const closeLightbox = () => {
+  showLightbox.value = false
+}
+
+const handleZoom = (delta: number) => {
+  zoomLevel.value = Math.max(0.5, Math.min(3, zoomLevel.value + delta))
 }
 
 const time = computed(() => {
@@ -61,11 +77,18 @@ const isVideo = computed(() => props.message.media === 3)
       <div 
         :class="cn(
           'p-3 rounded-lg text-sm break-words',
-          isMe ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
+          isMe ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground',
+          isImage ? 'p-1' : '' // Remove padding for images to look cleaner
         )"
       >
-        <div v-if="isImage">
-          <img :src="imageUrl" class="max-w-full rounded-md cursor-pointer" loading="lazy" @error="handleImageError" />
+        <div v-if="isImage" class="relative w-64 aspect-[4/3] overflow-hidden rounded-md group">
+          <img 
+            :src="imageUrl" 
+            class="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105" 
+            loading="lazy" 
+            @error="handleImageError"
+            @click="openLightbox"
+          />
         </div>
         <div v-else-if="isVideo">
           <video :src="videoUrl" controls class="max-w-full rounded-md"></video>
@@ -75,5 +98,31 @@ const isVideo = computed(() => props.message.media === 3)
         </div>
       </div>
     </div>
+
+    <!-- Lightbox Teleport -->
+    <Teleport to="body">
+      <div v-if="showLightbox" class="fixed inset-0 z-50 flex items-center justify-center bg-black/95" @click.self="closeLightbox">
+        <button class="absolute top-4 right-4 text-white hover:text-gray-300 z-[60]" @click="closeLightbox">
+          <X class="w-8 h-8" />
+        </button>
+        
+        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 bg-black/50 p-2 rounded-full z-[60]">
+          <button class="text-white hover:text-gray-300" @click="handleZoom(-0.25)">
+            <ZoomOut class="w-6 h-6" />
+          </button>
+          <span class="text-white min-w-[3ch] text-center">{{ Math.round(zoomLevel * 100) }}%</span>
+          <button class="text-white hover:text-gray-300" @click="handleZoom(0.25)">
+            <ZoomIn class="w-6 h-6" />
+          </button>
+        </div>
+
+        <img 
+          :src="imageUrl" 
+          class="max-w-[90vw] max-h-[90vh] transition-transform duration-200 ease-out object-contain relative z-50"
+          :style="{ transform: `scale(${zoomLevel})` }"
+          @click.stop
+        />
+      </div>
+    </Teleport>
   </div>
 </template>
